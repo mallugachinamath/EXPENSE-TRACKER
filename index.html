@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ARB Tracker - Mobile & Desktop App</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none;
+            overscroll-behavior-y: none;
+        }
+        .app-window {
+            max-width: 480px;
+            margin: 0 auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        @media (min-width: 768px) {
+            .app-window {
+                max-width: 100%;
+                box-shadow: none;
+            }
+        }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 h-full flex flex-col antialiased justify-center items-center p-0 md:p-4">
+
+    <!-- Auth Modal Overlay -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 sm:p-8 border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-4 shadow-inner">
+                    <i data-lucide="wallet" class="w-8 h-8"></i>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Expense & ARB Tracker</h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">Join the shared circle of friends with 'krishna'</p>
+            </div>
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Your Name</label>
+                    <input type="text" id="auth-name" required placeholder="e.g. Alex, Rahul..." class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">App Keyword</label>
+                    <input type="password" id="auth-keyword" required placeholder="Secret keyword" class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                    <p class="text-xs text-slate-400 mt-1">Hint: <span class="font-mono font-bold text-slate-600">krishna</span></p>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-sm">
+                    Launch Application
+                </button>
+            </form>
+            <div id="auth-error" class="mt-4 text-center text-xs text-rose-500 font-medium hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="app-window w-full h-full bg-slate-50 flex flex-col relative overflow-hidden md:rounded-3xl border-0 md:border border-slate-700/50 hidden pb-20 md:pb-0">
+        
+        <!-- App Header -->
+        <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/20">
+                    <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900 leading-tight">ARB Tracker v2.5</h2>
+                    <span class="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Group 'Krishna' Connected
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="install-app-btn" class="hidden bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 transition-all">
+                    <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Install
+                </button>
+                <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <div class="w-6 h-6 rounded-lg bg-slate-800 text-white text-xs font-semibold flex items-center justify-center" id="user-avatar-initial">U</div>
+                    <span class="text-xs font-medium text-slate-700 max-w-[80px] truncate" id="current-user-display">User</span>
+                </div>
+                <button id="logout-btn" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Logout">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Area -->
+        <div class="flex-1 flex overflow-hidden">
+            
+            <!-- Desktop Sidebar -->
+            <aside class="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col shrink-0">
+                <nav class="p-3 space-y-1.5 flex-1">
+                    <button onclick="switchTab('dashboard')" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl font-medium text-sm text-emerald-700 bg-emerald-50 transition-all" data-tab="dashboard">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('expenses')" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-50 transition-all" data-tab="expenses">
+                        <i data-lucide="receipt" class="w-5 h-5 shrink-0"></i>
+                        <span>Expenses</span>
+                    </button>
+                    <button onclick="switchTab('reports')" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-50 transition-all" data-tab="reports">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 shrink-0"></i>
+                        <span>Reports & Analytics</span>
+                    </button>
+                    <button onclick="switchTab('friends')" class="tab-btn w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-50 transition-all" data-tab="friends">
+                        <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+                        <span>Friends Circle</span>
+                    </button>
+                </nav>
+                <div class="p-3 border-t border-slate-100">
+                    <button onclick="openAddExpenseModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-3 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 transition-all text-sm">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span>Add Expense</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Scrollable Content Views -->
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+                
+                <!-- DASHBOARD TAB -->
+                <div id="tab-dashboard" class="space-y-6 max-w-6xl mx-auto tab-content">
+                    
+                    <!-- Top Balance Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden flex flex-col justify-between">
+                            <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-slate-400">Main Balance</span>
+                                    <button onclick="openEditMainBalanceModal()" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-3 py-1.5 rounded-xl transition-all text-xs flex items-center gap-1.5 font-medium">
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                                    </button>
+                                </div>
+                                <div class="text-3xl sm:text-4xl font-extrabold tracking-tight" id="main-balance-display">₹0.00</div>
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
+                                <span>Available liquid funds</span>
+                                <span class="text-emerald-400 font-semibold" id="total-main-spent">Spent: ₹0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden flex flex-col justify-between">
+                            <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-emerald-100">ARB Savings (Profit Pool)</span>
+                                    <button onclick="openEditArbBalanceModal()" class="bg-white/20 hover:bg-white/30 active:bg-white/40 text-white px-3 py-1.5 rounded-xl transition-all text-xs flex items-center gap-1.5 font-medium">
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Add / Edit
+                                    </button>
+                                </div>
+                                <div class="text-3xl sm:text-4xl font-extrabold tracking-tight" id="arb-balance-display">₹0.00</div>
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-emerald-500/40 flex items-center justify-between text-xs text-emerald-100">
+                                <span>Total saved profits</span>
+                                <span class="text-white font-semibold" id="total-arb-spent">Spent: ₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions & Daily Reset Bar -->
+                    <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-900">Daily Rollback Reset</h4>
+                                <p class="text-[10px] text-slate-500">Reset & refund changes made today only</p>
+                            </div>
+                        </div>
+                        <button onclick="openResetDayModal()" class="bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-800 font-semibold px-4 py-2.5 rounded-2xl text-xs transition-all border border-amber-200 shadow-sm">
+                            Reset Today's Entries
+                        </button>
+                    </div>
+
+                    <!-- Connected Friends Feed Section -->
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Connected Friends Feed</h3>
+                                <p class="text-xs text-slate-500">Friends currently logged in with 'krishna'</p>
+                            </div>
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-semibold border border-emerald-200">Live Sync</span>
+                        </div>
+                        <div id="dashboard-friends-feed" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Expenses Section -->
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Recent Squad Expenses</h3>
+                                <p class="text-xs text-slate-500">Latest entries from all group members</p>
+                            </div>
+                            <button onclick="switchTab('expenses')" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700">View All</button>
+                        </div>
+
+                        <!-- Desktop Table -->
+                        <div class="hidden sm:block overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-100 text-slate-400 font-semibold">
+                                        <th class="py-3 px-2">Member</th>
+                                        <th class="py-3 px-2">Title</th>
+                                        <th class="py-3 px-2">Source</th>
+                                        <th class="py-3 px-2">Amount</th>
+                                        <th class="py-3 px-2">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-expenses-list" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Mobile Cards -->
+                        <div class="sm:hidden space-y-2.5" id="dashboard-expenses-mobile-list"></div>
+                    </div>
+
+                </div>
+
+                <!-- EXPENSES TAB -->
+                <div id="tab-expenses" class="space-y-6 max-w-6xl mx-auto tab-content hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">All Expenses</h3>
+                            <p class="text-xs text-slate-500">Your entries are editable. Friends' are view-only.</p>
+                        </div>
+                        <button onclick="openAddExpenseModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-2xl text-xs shadow-lg">
+                            <i data-lucide="plus" class="w-4 h-4 inline mr-1"></i> Add
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap gap-2 items-center justify-between">
+                        <div class="text-xs text-slate-500 font-medium" id="expense-count-label">0 items</div>
+                    </div>
+
+                    <!-- Desktop Expenses Table -->
+                    <div class="hidden sm:block bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 border-b border-slate-100 text-slate-400 font-semibold">
+                                <tr>
+                                    <th class="py-4 px-4">Member</th>
+                                    <th class="py-4 px-4">Title</th>
+                                    <th class="py-4 px-4">Source</th>
+                                    <th class="py-4 px-4">Amount</th>
+                                    <th class="py-4 px-4">Date</th>
+                                    <th class="py-4 px-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-expenses-list" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Expenses List -->
+                    <div class="sm:hidden space-y-3" id="full-expenses-mobile-list"></div>
+                </div>
+
+                <!-- REPORTS & ANALYTICS TAB -->
+                <div id="tab-reports" class="space-y-6 max-w-6xl mx-auto tab-content hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Reports & Analytics</h3>
+                            <p class="text-xs text-slate-500">ARB Savings and Spending Insights</p>
+                        </div>
+                        <button onclick="downloadWeeklyPDF()" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-2xl text-xs shadow-lg flex items-center gap-1.5">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download PDF Report
+                        </button>
+                    </div>
+
+                    <!-- Report Metrics Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">ARB Savings (Daily Added)</div>
+                            <div class="text-2xl font-bold text-emerald-600" id="report-arb-saved-daily">₹0.00</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Spent from ARB (Daily Avg)</div>
+                            <div class="text-2xl font-bold text-emerald-600" id="report-arb-daily">₹0.00</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Spent from ARB (This Week)</div>
+                            <div class="text-2xl font-bold text-emerald-600" id="report-arb-weekly">₹0.00</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Spent from ARB (This Month)</div>
+                            <div class="text-2xl font-bold text-emerald-600" id="report-arb-monthly">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-80">
+                            <h4 class="text-sm font-bold text-slate-900 mb-4">Spending Breakdown (Main vs ARB)</h4>
+                            <div class="flex-1 relative flex items-center justify-center">
+                                <canvas id="spendingChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-80">
+                            <h4 class="text-sm font-bold text-slate-900 mb-4">Friends Weekly Spending Comparison</h4>
+                            <div class="flex-1 relative flex items-center justify-center">
+                                <canvas id="friendsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FRIENDS CIRCLE TAB -->
+                <div id="tab-friends" class="space-y-6 max-w-6xl mx-auto tab-content hidden">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Friends Circle & Squad Analysis</h3>
+                        <p class="text-xs text-slate-500">Squad members, weekly savings champion, and full expense view</p>
+                    </div>
+
+                    <!-- Friends Profile Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="friends-cards-container">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Weekly Winner & Badge (Relocated Below Friends Circle) -->
+                    <div class="bg-amber-50 border border-amber-200/60 p-5 rounded-3xl flex items-center justify-between shadow-sm">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-14 h-14 rounded-2xl bg-amber-500 text-white font-bold flex items-center justify-center text-xl shadow-md shadow-amber-500/30" id="weekly-winner-initial">?</div>
+                            <div>
+                                <div class="text-[11px] text-amber-700 font-semibold uppercase tracking-wider flex items-center gap-1">
+                                    <i data-lucide="award" class="w-3.5 h-3.5"></i> Weekly Savings Champion
+                                </div>
+                                <div class="text-lg font-bold text-slate-900" id="weekly-winner-name">Calculating...</div>
+                                <p class="text-[11px] text-slate-500">Awarded for lowest total spend this week</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[11px] text-slate-500">Weekly Spend</div>
+                            <div class="text-base font-extrabold text-emerald-600" id="weekly-winner-spent">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- View Squad Section (Full Friend Expenses) -->
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                        <div>
+                            <h4 class="text-base font-bold text-slate-900">View Squad Expenses</h4>
+                            <p class="text-xs text-slate-500">Analyze itemized expenses of all connected friends in real-time</p>
+                        </div>
+                        <div class="hidden sm:block overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="border-b border-slate-100 text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="py-3 px-3">Member</th>
+                                        <th class="py-3 px-3">Title</th>
+                                        <th class="py-3 px-3">Source</th>
+                                        <th class="py-3 px-3">Amount</th>
+                                        <th class="py-3 px-3">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="view-squad-expenses-list" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div class="sm:hidden space-y-2.5" id="view-squad-expenses-mobile-list"></div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <!-- Mobile Bottom Native Navigation Bar -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white/90 backdrop-blur-lg border-t border-slate-200 px-4 py-2 flex items-center justify-around z-40 shadow-2xl">
+            <button onclick="switchTab('dashboard')" class="mobile-tab-btn flex flex-col items-center py-1 px-3 text-emerald-600 transition-all" data-tab="dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold mt-0.5">Dashboard</span>
+            </button>
+            <button onclick="switchTab('expenses')" class="mobile-tab-btn flex flex-col items-center py-1 px-3 text-slate-400 transition-all" data-tab="expenses">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-0.5">Expenses</span>
+            </button>
+            <button onclick="openAddExpenseModal()" class="flex flex-col items-center justify-center -mt-5 bg-emerald-600 text-white w-12 h-12 rounded-full shadow-lg shadow-emerald-600/30">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+            <button onclick="switchTab('reports')" class="mobile-tab-btn flex flex-col items-center py-1 px-3 text-slate-400 transition-all" data-tab="reports">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-0.5">Reports</span>
+            </button>
+            <button onclick="switchTab('friends')" class="mobile-tab-btn flex flex-col items-center py-1 px-3 text-slate-400 transition-all" data-tab="friends">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium mt-0.5">Friends</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ADD EXPENSE MODAL -->
+    <div id="expense-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+        <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-slate-100 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-900">Log New Expense</h3>
+                    <p class="text-xs text-slate-500">Choose fund source carefully</p>
+                </div>
+                <button onclick="closeAddExpenseModal()" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="expense-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Expense Title</label>
+                    <input type="text" id="expense-title" required placeholder="e.g., Grocery, Dinner, Utilities..." class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Amount (₹)</label>
+                    <input type="number" step="0.01" min="0.01" id="expense-amount" required placeholder="0.00" class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Deduct Funds From:</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center space-x-2 p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 cursor-pointer text-xs font-bold text-emerald-900">
+                            <input type="radio" name="fund-source" value="main" checked class="text-emerald-600 focus:ring-emerald-500">
+                            <span>Main Balance</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-3.5 rounded-2xl border-2 border-slate-200 cursor-pointer text-xs font-bold text-slate-700">
+                            <input type="radio" name="fund-source" value="arb" class="text-emerald-600 focus:ring-emerald-500">
+                            <span>ARB Savings</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-sm">
+                    Record Expense
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT MAIN BALANCE MODAL -->
+    <div id="balance-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+        <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-sm w-full p-6 sm:p-8 border border-slate-100 animate-in slide-in-from-bottom duration-200">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">Update Main Balance</h3>
+                    <p class="text-xs text-slate-500">Set current total liquid funds</p>
+                </div>
+                <button onclick="closeEditMainBalanceModal()" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="balance-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">New Main Balance (₹)</label>
+                    <input type="number" step="0.01" id="new-main-balance-input" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-sm">
+                    Update Balance
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT ARB SAVINGS MODAL -->
+    <div id="arb-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+        <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-sm w-full p-6 sm:p-8 border border-slate-100 animate-in slide-in-from-bottom duration-200">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900">Add / Edit ARB Savings</h3>
+                    <p class="text-xs text-slate-500">Log daily profit savings into ARB</p>
+                </div>
+                <button onclick="closeEditArbBalanceModal()" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="arb-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Action Type</label>
+                    <select id="arb-action-type" class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                        <option value="add">Add Daily Savings (₹)</option>
+                        <option value="set">Set Total ARB Balance (₹)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Amount (₹)</label>
+                    <input type="number" step="0.01" min="0.01" id="new-arb-amount-input" required placeholder="0.00" class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-slate-50/50">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-sm">
+                    Confirm ARB Update
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Notification Toast -->
+    <div id="custom-alert" class="fixed top-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 max-w-sm w-full bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-700">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+        <div id="custom-alert-msg" class="text-xs font-medium">Notification message</div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'arb-expense-tracker-krishna';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "demo-key", authDomain: "demo.firebaseapp.com", projectId: "demo-project", storageBucket: "demo.appspot.com", messagingSenderId: "123", appId: "123"
+        };
+
+        let db, auth;
+        let currentUserName = localStorage.getItem('arb_user_name') || '';
+        let deferredPrompt = null;
+
+        let appState = {
+            mainBalance: 50000.00,
+            arbBalance: 15000.00,
+            expenses: [],
+            arbSavingsLogs: []
+        };
+
+        let spendingChartInstance = null;
+        let friendsChartInstance = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) installBtn.classList.remove('hidden');
+        });
+
+        window.onload = async function() {
+            lucide.createIcons();
+
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') deferredPrompt = null;
+                        installBtn.classList.add('hidden');
+                    } else {
+                        showNotification("App is already installed or browser does not support direct PWA prompt.");
+                    }
+                });
+            }
+
+            if (currentUserName && localStorage.getItem('arb_logged_in') === 'true') {
+                const authModal = document.getElementById('auth-modal');
+                const appContainer = document.getElementById('app-container');
+                if (authModal) authModal.classList.add('hidden');
+                if (appContainer) appContainer.classList.remove('hidden');
+                initAppSession(currentUserName);
+            }
+
+            const authForm = document.getElementById('auth-form');
+            if (authForm) {
+                authForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const nameInput = document.getElementById('auth-name').value.trim();
+                    const keywordInput = document.getElementById('auth-keyword').value.trim();
+                    const errEl = document.getElementById('auth-error');
+
+                    if (keywordInput.toLowerCase() !== 'krishna') {
+                        if (errEl) {
+                            errEl.textContent = "Incorrect keyword! Enter 'krishna'.";
+                            errEl.classList.remove('hidden');
+                        }
+                        return;
+                    }
+                    if (!nameInput) {
+                        if (errEl) {
+                            errEl.textContent = "Please enter your name.";
+                            errEl.classList.remove('hidden');
+                        }
+                        return;
+                    }
+
+                    currentUserName = nameInput;
+                    localStorage.setItem('arb_user_name', currentUserName);
+                    localStorage.setItem('arb_logged_in', 'true');
+
+                    const authModal = document.getElementById('auth-modal');
+                    const appContainer = document.getElementById('app-container');
+                    if (authModal) authModal.classList.add('hidden');
+                    if (appContainer) appContainer.classList.remove('hidden');
+                    initAppSession(currentUserName);
+                });
+            }
+
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('arb_logged_in');
+                    location.reload();
+                });
+            }
+
+            const expenseForm = document.getElementById('expense-form');
+            if (expenseForm) expenseForm.addEventListener('submit', (e) => { e.preventDefault(); handleAddExpenseSubmit(); });
+
+            const balanceForm = document.getElementById('balance-form');
+            if (balanceForm) balanceForm.addEventListener('submit', (e) => { e.preventDefault(); handleUpdateBalanceSubmit(); });
+
+            const arbForm = document.getElementById('arb-form');
+            if (arbForm) arbForm.addEventListener('submit', (e) => { e.preventDefault(); handleUpdateArbSubmit(); });
+        };
+
+        async function initAppSession(userName) {
+            document.getElementById('current-user-display').textContent = userName;
+            document.getElementById('user-avatar-initial').textContent = userName.charAt(0).toUpperCase();
+
+            const localData = localStorage.getItem('arb_app_state');
+            if (localData) {
+                try { appState = JSON.parse(localData); } catch (e) { console.error(e); }
+            }
+            updateUI();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Using a flat collection path with even number of segments to satisfy security rules
+                const groupDocRef = doc(db, 'artifacts_' + appId, 'krishna_group');
+                onSnapshot(groupDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        appState.mainBalance = data.mainBalance ?? appState.mainBalance;
+                        appState.arbBalance = data.arbBalance ?? appState.arbBalance;
+                        appState.expenses = data.expenses || appState.expenses;
+                        appState.arbSavingsLogs = data.arbSavingsLogs || appState.arbSavingsLogs;
+                    }
+                    updateUI();
+                }, (error) => {
+                    console.debug("Firestore snapshot notice:", error.message);
+                });
+            } catch (err) {
+                console.debug("Running in offline local mode.");
+            }
+        }
+
+        async function saveStateToFirebase() {
+            localStorage.setItem('arb_app_state', JSON.stringify(appState));
+            try {
+                if (!db) return;
+                const groupDocRef = doc(db, 'artifacts_' + appId, 'krishna_group');
+                await setDoc(groupDocRef, appState, { merge: true });
+            } catch (err) { 
+                console.debug("Cloud sync skipped or restricted; saved locally."); 
+            }
+        }
+
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-emerald-700', 'bg-emerald-50');
+                btn.classList.add('text-slate-600', 'hover:bg-slate-50');
+            });
+            document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+                btn.classList.remove('text-emerald-600');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            const activeBtn = document.querySelector('[data-tab="' + tabName + '"]');
+            if (activeBtn) {
+                if (activeBtn.classList.contains('mobile-tab-btn')) {
+                    activeBtn.classList.remove('text-slate-400');
+                    activeBtn.classList.add('text-emerald-600');
+                } else {
+                    activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                    activeBtn.classList.add('text-emerald-700', 'bg-emerald-50');
+                }
+            }
+
+            if (tabName === 'reports') renderReportsAndCharts();
+            else if (tabName === 'friends') renderFriendsCircle();
+            else if (tabName === 'expenses') renderExpensesTable();
+            else updateUI();
+        };
+
+        function updateUI() {
+            document.getElementById('main-balance-display').textContent = '₹' + appState.mainBalance.toFixed(2);
+            document.getElementById('arb-balance-display').textContent = '₹' + appState.arbBalance.toFixed(2);
+
+            let mainSpent = 0;
+            let arbSpent = 0;
+            appState.expenses.forEach(exp => {
+                if (exp.source === 'main') mainSpent += exp.amount;
+                if (exp.source === 'arb') arbSpent += exp.amount;
+            });
+
+            document.getElementById('total-main-spent').textContent = 'Spent: ₹' + mainSpent.toFixed(2);
+            document.getElementById('total-arb-spent').textContent = 'Spent: ₹' + arbSpent.toFixed(2);
+
+            const friendsFeed = document.getElementById('dashboard-friends-feed');
+            if (friendsFeed) {
+                friendsFeed.innerHTML = '';
+                const friendsSet = new Set(['Krishna', currentUserName]);
+                appState.expenses.forEach(e => friendsSet.add(e.user));
+                const list = Array.from(friendsSet).slice(0, 4);
+
+                list.forEach(f => {
+                    const fExps = appState.expenses.filter(e => e.user === f);
+                    const fTotal = fExps.reduce((sum, e) => sum + e.amount, 0);
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center">${f.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <div class="font-bold text-slate-900 text-xs sm:text-sm">${escapeHtml(f)} ${f === currentUserName ? '(You)' : ''}</div>
+                                <div class="text-[10px] text-slate-500">${fExps.length} expenses logged</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] text-slate-400">Spent</div>
+                            <div class="font-bold text-emerald-600 text-xs sm:text-sm">₹${fTotal.toFixed(2)}</div>
+                        </div>
+                    `;
+                    friendsFeed.appendChild(card);
+                });
+            }
+
+            const dashList = document.getElementById('dashboard-expenses-list');
+            const dashMobileList = document.getElementById('dashboard-expenses-mobile-list');
+            if (dashList && dashMobileList) {
+                dashList.innerHTML = '';
+                dashMobileList.innerHTML = '';
+                const recent = [...appState.expenses].reverse().slice(0, 5);
+                
+                if (recent.length === 0) {
+                    dashList.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400 text-xs">No expenses logged yet. Click \'Add Expense\' to start.</td></tr>';
+                    dashMobileList.innerHTML = '<div class="py-6 text-center text-slate-400 text-xs">No expenses logged yet. Click \'Add Expense\' to start.</div>';
+                } else {
+                    recent.forEach(exp => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-slate-50/50 transition-colors';
+                        row.innerHTML = `
+                            <td class="py-3 px-2 font-medium text-slate-900">${escapeHtml(exp.user)}</td>
+                            <td class="py-3 px-2 text-slate-700">${escapeHtml(exp.title)}</td>
+                            <td class="py-3 px-2"><span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold ${exp.source === 'arb' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}">${exp.source === 'arb' ? 'ARB Savings' : 'Main'}</span></td>
+                            <td class="py-3 px-2 font-bold text-slate-900">₹${exp.amount.toFixed(2)}</td>
+                            <td class="py-3 px-2 text-xs text-slate-400">${new Date(exp.timestamp).toLocaleDateString()}</td>
+                        `;
+                        dashList.appendChild(row);
+
+                        const mCard = document.createElement('div');
+                        mCard.className = 'bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-center justify-between text-xs';
+                        mCard.innerHTML = `
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center">${exp.user.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <div class="font-bold text-slate-900">${escapeHtml(exp.title)}</div>
+                                    <div class="text-[10px] text-slate-500">${escapeHtml(exp.user)} • ${new Date(exp.timestamp).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-slate-900">₹${exp.amount.toFixed(2)}</div>
+                                <span class="text-[10px] font-semibold ${exp.source === 'arb' ? 'text-emerald-600' : 'text-slate-500'}">${exp.source === 'arb' ? 'ARB' : 'Main'}</span>
+                            </div>
+                        `;
+                        dashMobileList.appendChild(mCard);
+                    });
+                }
+            }
+
+            lucide.createIcons();
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.openAddExpenseModal = () => document.getElementById('expense-modal').classList.remove('hidden');
+        window.closeAddExpenseModal = () => { document.getElementById('expense-modal').classList.add('hidden'); document.getElementById('expense-form').reset(); };
+
+        async function handleAddExpenseSubmit() {
+            const title = document.getElementById('expense-title').value.trim();
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const source = document.querySelector('input[name="fund-source"]:checked').value;
+
+            if (!title || isNaN(amount) || amount <= 0) {
+                showNotification("Please provide valid expense details.");
+                return;
+            }
+
+            if (source === 'main') {
+                appState.mainBalance -= amount;
+            } else {
+                appState.arbBalance -= amount;
+            }
+
+            const newExpense = {
+                id: 'exp_' + Math.random().toString(36).substring(2, 9),
+                user: currentUserName,
+                title: title,
+                amount: amount,
+                source: source,
+                timestamp: Date.now()
+            };
+
+            appState.expenses.push(newExpense);
+            closeAddExpenseModal();
+            await saveStateToFirebase();
+            updateUI();
+            showNotification('Expense of ₹' + amount.toFixed(2) + ' successfully logged.');
+        }
+
+        window.openEditMainBalanceModal = () => { document.getElementById('new-main-balance-input').value = appState.mainBalance; document.getElementById('balance-modal').classList.remove('hidden'); };
+        window.closeEditMainBalanceModal = () => document.getElementById('balance-modal').classList.add('hidden');
+
+        async function handleUpdateBalanceSubmit() {
+            const newBal = parseFloat(document.getElementById('new-main-balance-input').value);
+            if (isNaN(newBal)) return;
+            appState.mainBalance = newBal;
+            closeEditMainBalanceModal();
+            await saveStateToFirebase();
+            updateUI();
+            showNotification("Main balance updated!");
+        }
+
+        window.openEditArbBalanceModal = () => document.getElementById('arb-modal').classList.remove('hidden');
+        window.closeEditArbBalanceModal = () => document.getElementById('arb-modal').classList.add('hidden');
+
+        async function handleUpdateArbSubmit() {
+            const actionType = document.getElementById('arb-action-type').value;
+            const amount = parseFloat(document.getElementById('new-arb-amount-input').value);
+
+            if (isNaN(amount) || amount <= 0) {
+                showNotification("Please enter a valid amount.");
+                return;
+            }
+
+            if (actionType === 'add') {
+                appState.arbBalance += amount;
+                if (!appState.arbSavingsLogs) appState.arbSavingsLogs = [];
+                appState.arbSavingsLogs.push({
+                    id: 'arb_' + Math.random().toString(36).substring(2, 9),
+                    user: currentUserName,
+                    amount: amount,
+                    timestamp: Date.now()
+                });
+                showNotification("Successfully added ₹" + amount.toFixed(2) + " to ARB savings!");
+            } else {
+                appState.arbBalance = amount;
+                showNotification("ARB balance successfully set to ₹" + amount.toFixed(2) + "!");
+            }
+
+            closeEditArbBalanceModal();
+            await saveStateToFirebase();
+            updateUI();
+        }
+
+        window.openResetDayModal = async function() {
+            const today = new Date().toDateString();
+            const todayExpenses = appState.expenses.filter(e => e.user === currentUserName && new Date(e.timestamp).toDateString() === today);
+            const todayArbLogs = (appState.arbSavingsLogs || []).filter(l => l.user === currentUserName && new Date(l.timestamp).toDateString() === today);
+
+            if (todayExpenses.length === 0 && todayArbLogs.length === 0) {
+                showNotification("No changes made by you today to reset.");
+                return;
+            }
+
+            // Refund expenses & ARB logs made today
+            todayExpenses.forEach(exp => {
+                if (exp.source === 'main') appState.mainBalance += exp.amount;
+                else appState.arbBalance += exp.amount;
+            });
+            todayArbLogs.forEach(log => {
+                appState.arbBalance -= log.amount;
+            });
+
+            appState.expenses = appState.expenses.filter(e => !(e.user === currentUserName && new Date(e.timestamp).toDateString() === today));
+            appState.arbSavingsLogs = (appState.arbSavingsLogs || []).filter(l => !(l.user === currentUserName && new Date(l.timestamp).toDateString() === today));
+
+            await saveStateToFirebase();
+            updateUI();
+            showNotification("Today's changes successfully rolled back and refunded.");
+        };
+
+        window.renderExpensesTable = function() {
+            const tbody = document.getElementById('full-expenses-list');
+            const mobileList = document.getElementById('full-expenses-mobile-list');
+            if (!tbody || !mobileList) return;
+            tbody.innerHTML = '';
+            mobileList.innerHTML = '';
+            const filtered = [...appState.expenses].reverse();
+            document.getElementById('expense-count-label').textContent = filtered.length + ' items';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400 text-xs">No expenses found.</td></tr>';
+                mobileList.innerHTML = '<div class="text-center text-slate-400 text-xs py-8">No expenses found.</div>';
+                return;
+            }
+
+            filtered.forEach(exp => {
+                const isOwner = exp.user === currentUserName;
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-4 px-4 font-semibold text-slate-900 flex items-center space-x-2">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center">${exp.user.charAt(0).toUpperCase()}</span>
+                        <span>${escapeHtml(exp.user)}</span>
+                        ${isOwner ? '<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">You</span>' : ''}
+                    </td>
+                    <td class="py-4 px-4 text-slate-700 font-medium">${escapeHtml(exp.title)}</td>
+                    <td class="py-4 px-4"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${exp.source === 'arb' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}">${exp.source === 'arb' ? 'ARB Savings' : 'Main Balance'}</span></td>
+                    <td class="py-4 px-4 font-bold text-slate-900">₹${exp.amount.toFixed(2)}</td>
+                    <td class="py-4 px-4 text-xs text-slate-500">${new Date(exp.timestamp).toLocaleString()}</td>
+                    <td class="py-4 px-4 text-right">
+                        ${isOwner ? '<button onclick="deleteExpense(\'' + exp.id + '\')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-all" title="Delete your expense"><i data-lucide="trash-2" class="w-4 h-4"></i></button>' : '<span class="text-xs text-slate-400 italic">View Only</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                const mCard = document.createElement('div');
+                mCard.className = 'bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2';
+                mCard.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center">${exp.user.charAt(0).toUpperCase()}</span>
+                            <span class="font-bold text-slate-900 text-xs">${escapeHtml(exp.user)}</span>
+                            ${isOwner ? '<span class="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">You</span>' : ''}
+                        </div>
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${exp.source === 'arb' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}">${exp.source === 'arb' ? 'ARB Savings' : 'Main'}</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">${escapeHtml(exp.title)}</div>
+                            <div class="text-[10px] text-slate-400">${new Date(exp.timestamp).toLocaleString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-slate-900 text-base">₹${exp.amount.toFixed(2)}</div>
+                            ${isOwner ? '<button onclick="deleteExpense(\'' + exp.id + '\')" class="mt-1 text-[11px] text-rose-600 font-medium inline-flex items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Delete</button>' : '<span class="text-[10px] text-slate-400 italic">View Only</span>'}
+                        </div>
+                    </div>
+                `;
+                mobileList.appendChild(mCard);
+            });
+            lucide.createIcons();
+        };
+
+        function calculateWeeklyWinner() {
+            const now = new Date().getTime();
+            const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000);
+
+            const friendsSet = new Set(['Krishna', currentUserName]);
+            appState.expenses.forEach(e => friendsSet.add(e.user));
+
+            let minSpend = Infinity;
+            let winner = 'None yet';
+
+            friendsSet.forEach(friend => {
+                const fWeekExps = appState.expenses.filter(e => e.user === friend && e.timestamp >= oneWeekAgo);
+                const fTotal = fWeekExps.reduce((sum, e) => sum + e.amount, 0);
+                if (fTotal < minSpend) {
+                    minSpend = fTotal;
+                    winner = friend;
+                }
+            });
+
+            const winnerEl = document.getElementById('weekly-winner-name');
+            const spentEl = document.getElementById('weekly-winner-spent');
+            const initialEl = document.getElementById('weekly-winner-initial');
+
+            if (winnerEl) winnerEl.textContent = winner;
+            if (spentEl) spentEl.textContent = '₹' + minSpend.toFixed(2);
+            if (initialEl) initialEl.textContent = winner.charAt(0).toUpperCase();
+        }
+
+        function renderReportsAndCharts() {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const oneWeekAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+            const oneMonthAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+
+            let arbSavedDaily = 0;
+            (appState.arbSavingsLogs || []).forEach(log => {
+                if (log.timestamp >= todayStart) arbSavedDaily += log.amount;
+            });
+
+            let arbDaily = 0;
+            let arbWeekly = 0;
+            let arbMonthly = 0;
+
+            let mainTotalSpent = 0;
+            let arbTotalSpent = 0;
+
+            appState.expenses.forEach(e => {
+                if (e.source === 'arb') {
+                    if (e.timestamp >= todayStart) arbDaily += e.amount;
+                    if (e.timestamp >= oneWeekAgo) arbWeekly += e.amount;
+                    if (e.timestamp >= oneMonthAgo) arbMonthly += e.amount;
+                    arbTotalSpent += e.amount;
+                } else {
+                    mainTotalSpent += e.amount;
+                }
+            });
+
+            document.getElementById('report-arb-saved-daily').textContent = '₹' + arbSavedDaily.toFixed(2);
+            document.getElementById('report-arb-daily').textContent = '₹' + arbDaily.toFixed(2);
+            document.getElementById('report-arb-weekly').textContent = '₹' + arbWeekly.toFixed(2);
+            document.getElementById('report-arb-monthly').textContent = '₹' + arbMonthly.toFixed(2);
+
+            const ctx1 = document.getElementById('spendingChart').getContext('2d');
+            if (spendingChartInstance) spendingChartInstance.destroy();
+            spendingChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Main Spent', 'ARB Spent'],
+                    datasets: [{
+                        data: [mainTotalSpent, arbTotalSpent],
+                        backgroundColor: ['#0f172a', '#059669'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            const friendsMap = {};
+            appState.expenses.filter(e => e.timestamp >= oneWeekAgo).forEach(e => {
+                friendsMap[e.user] = (friendsMap[e.user] || 0) + e.amount;
+            });
+
+            const friendNames = Object.keys(friendsMap);
+            const friendSpent = Object.values(friendsMap);
+
+            const ctx2 = document.getElementById('friendsChart').getContext('2d');
+            if (friendsChartInstance) friendsChartInstance.destroy();
+            friendsChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: friendNames.length ? friendNames : [currentUserName],
+                    datasets: [{
+                        label: 'Weekly Spend (₹)',
+                        data: friendSpent.length ? friendSpent : [0],
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        window.renderFriendsCircle = function() {
+            const container = document.getElementById('friends-cards-container');
+            container.innerHTML = '';
+
+            const friendsSet = new Set(['Krishna', currentUserName]);
+            appState.expenses.forEach(e => friendsSet.add(e.user));
+
+            const friendsList = Array.from(friendsSet).slice(0, 4);
+
+            friendsList.forEach(friend => {
+                const friendExpenses = appState.expenses.filter(e => e.user === friend);
+                const totalSpent = friendExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 font-bold text-lg flex items-center justify-center">${friend.charAt(0).toUpperCase()}</div>
+                            <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">Connected</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-base sm:text-lg">${escapeHtml(friend)}</h4>
+                        <p class="text-xs text-slate-400 mb-4">${friend === currentUserName ? 'You (Full Access)' : 'Friend (View Only)'}</p>
+                        <div class="space-y-2 pt-2 border-t border-slate-100">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Total Expenses</span>
+                                <span class="font-bold text-slate-900">${friendExpenses.length}</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Total Spent</span>
+                                <span class="font-bold text-emerald-600">₹${totalSpent.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            calculateWeeklyWinner();
+            renderViewSquadTable();
+        };
+
+        function renderViewSquadTable() {
+            const tbody = document.getElementById('view-squad-expenses-list');
+            const mobileList = document.getElementById('view-squad-expenses-mobile-list');
+            if (!tbody || !mobileList) return;
+            tbody.innerHTML = '';
+            mobileList.innerHTML = '';
+
+            const allExps = [...appState.expenses].reverse();
+            if (allExps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400 text-xs">No expenses logged in the squad yet.</td></tr>';
+                mobileList.innerHTML = '<div class="py-6 text-center text-slate-400 text-xs">No expenses logged in the squad yet.</div>';
+                return;
+            }
+
+            allExps.forEach(exp => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-3 font-semibold text-slate-900 flex items-center space-x-2">
+                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center">${exp.user.charAt(0).toUpperCase()}</span>
+                        <span>${escapeHtml(exp.user)}</span>
+                    </td>
+                    <td class="py-3.5 px-3 text-slate-700">${escapeHtml(exp.title)}</td>
+                    <td class="py-3.5 px-3"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${exp.source === 'arb' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}">${exp.source === 'arb' ? 'ARB Savings' : 'Main Balance'}</span></td>
+                    <td class="py-3.5 px-3 font-bold text-slate-900">₹${exp.amount.toFixed(2)}</td>
+                    <td class="py-3.5 px-3 text-xs text-slate-400">${new Date(exp.timestamp).toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+
+                const mCard = document.createElement('div');
+                mCard.className = 'bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between text-xs';
+                mCard.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 font-bold flex items-center justify-center">${exp.user.charAt(0).toUpperCase()}</div>
+                        <div>
+                            <div class="font-bold text-slate-900">${escapeHtml(exp.title)}</div>
+                            <div class="text-[10px] text-slate-500">${escapeHtml(exp.user)} • ${new Date(exp.timestamp).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-slate-900 text-sm">₹${exp.amount.toFixed(2)}</div>
+                        <span class="text-[10px] font-semibold ${exp.source === 'arb' ? 'text-emerald-600' : 'text-slate-500'}">${exp.source === 'arb' ? 'ARB' : 'Main'}</span>
+                    </div>
+                `;
+                mobileList.appendChild(mCard);
+            });
+        }
+
+        window.downloadWeeklyPDF = function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("ARB & Main Balance - Weekly Expense Report", 20, 20);
+
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.text("Generated on: " + new Date().toLocaleString(), 20, 30);
+            doc.text("Group Workspace: 'Krishna'", 20, 38);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Current Main Balance: Rs. " + appState.mainBalance.toFixed(2), 20, 50);
+            doc.text("Current ARB Savings Balance: Rs. " + appState.arbBalance.toFixed(2), 20, 58);
+
+            let y = 75;
+            doc.setFontSize(14);
+            doc.text("Recent Expenses Summary", 20, y);
+            y += 10;
+
+            doc.setFontSize(10);
+            doc.setFillColor(240, 240, 240);
+            doc.rect(20, y, 170, 8, "F");
+            doc.text("Friend", 25, y + 6);
+            doc.text("Title", 75, y + 6);
+            doc.text("Source", 130, y + 6);
+            doc.text("Amount", 165, y + 6);
+            y += 12;
+
+            appState.expenses.slice(-15).reverse().forEach(exp => {
+                doc.text(exp.user, 25, y);
+                doc.text(exp.title, 75, y);
+                doc.text(exp.source.toUpperCase(), 130, y);
+                doc.text('Rs. ' + exp.amount.toFixed(2), 165, y);
+                y += 8;
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+            });
+
+            doc.save("ARB-Weekly-Expense-Report.pdf");
+            showNotification("Weekly PDF Report downloaded successfully!");
+        };
+
+        window.deleteExpense = async function(id) {
+            appState.expenses = appState.expenses.filter(e => e.id !== id);
+            await saveStateToFirebase();
+            updateUI();
+            renderExpensesTable();
+            showNotification("Expense deleted.");
+        };
+
+        function showNotification(msg) {
+            const alertEl = document.getElementById('custom-alert');
+            document.getElementById('custom-alert-msg').textContent = msg;
+            alertEl.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => alertEl.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+    </script>
+</body>
+</html>
